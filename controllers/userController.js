@@ -13,28 +13,33 @@ class UserController {
         }
     }
 
-    async signIn(req, res) {
+    async signUp(req, res) {
         try {
             const {name, password} = req.body;
             const error = validationResult(req);
             if(!error.isEmpty()) return res.status(400).send(`Registration error: ${error.errors[0].msg}`);
             const isUserExists = await User.findOne({name});
-            if (isUserExists) res.status(400).send("This username already in use.");
-            const role = new Role();
+            if (isUserExists) return res.status(400).send("This username already in use.");
+            const role = new Role({value: "User"});
             const hashedPassword = await bcrypt.hash(password, 7);
-            const user = new User({name, password: hashedPassword, role: [role.value]});
+            const user = new User({name, password: hashedPassword, role: [...role.value]});
             await user.save();
-            res.send("User successfully created")
+            return res.send("User successfully created")
         } catch(e) {
-            return res.status(400).send(e)
+            return res.status(400).send(`Sign in error ${e}`)
         }
     }
 
-    async signUp(req, res) {
+    async signIn(req, res) {
         try {
-
+            const {name, password} = req.body;
+            const user = await User.findOne({name});
+            if(!user) return res.status(400).send("User does not exist")
+            const result = await bcrypt.compareSync(password, user.password);
+            if(!result) return res.status(400).send("Wrong name or password");
+            return res.status(200).send('success');
         } catch(e) {
-            throw new Error(e);
+            return res.status(400).send(`Sign up error ${e}`);
         }
     }
 }
